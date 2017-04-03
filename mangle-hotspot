@@ -1,0 +1,89 @@
+# mar/26/2016 00:48:31 by RouterOS 6.9
+# software id = 7CGI-FIJM
+#
+/interface ethernet
+set [ find default-name=ether3 ] name=LAN1
+set [ find default-name=ether1 ] name=WAN1
+set [ find default-name=ether2 ] name=WAN2
+/ip hotspot profile
+add dns-name=smkn1cdp.wifi hotspot-address=10.10.10.1 login-by=http-chap \
+    name=hsprof1
+/ip hotspot user profile
+set [ find default=yes ] idle-timeout=none keepalive-timeout=2m \
+    mac-cookie-timeout=3d
+/ip pool
+add name=hs-pool-3 ranges=10.10.10.2-10.10.10.254
+/ip dhcp-server
+add address-pool=hs-pool-3 disabled=no interface=LAN1 lease-time=1h name=\
+    dhcp1
+/ip hotspot
+add address-pool=hs-pool-3 disabled=no interface=LAN1 name=hotspot1 profile=\
+    hsprof1
+/ip address
+add address=10.10.10.1/24 interface=LAN1 network=10.10.10.0
+add address=192.168.1.2/24 interface=WAN1 network=192.168.1.0
+add address=192.168.2.2/24 interface=WAN2 network=192.168.2.0
+/ip dhcp-server network
+add address=10.10.10.0/24 comment="hotspot network" gateway=10.10.10.1
+/ip dns
+set allow-remote-requests=yes cache-size=5000KiB max-udp-packet-size=512 \
+    servers=8.8.8.8
+/ip firewall filter
+add action=passthrough chain=unused-hs-chain comment=\
+    "place hotspot rules here" disabled=yes
+/ip firewall mangle
+add action=mark-connection chain=input in-interface=WAN1 new-connection-mark=\
+    WAN1_conn
+add action=mark-connection chain=input in-interface=WAN2 new-connection-mark=\
+    WAN2_conn
+add action=mark-routing chain=output connection-mark=WAN1_conn \
+    new-routing-mark=to_WAN1
+add action=mark-routing chain=output connection-mark=WAN2_conn \
+    new-routing-mark=to_WAN2
+add chain=prerouting dst-address=192.168.1.0/24 in-interface=LAN1
+add chain=prerouting dst-address=192.168.2.0/24 in-interface=LAN1
+add action=mark-connection chain=prerouting dst-address-type=!local \
+    in-interface=LAN1 new-connection-mark=WAN1_conn \
+    per-connection-classifier=both-addresses-and-ports:2/0
+add action=mark-connection chain=prerouting dst-address-type=!local \
+    in-interface=LAN1 new-connection-mark=WAN2_conn \
+    per-connection-classifier=both-addresses-and-ports:2/1
+#Jika Anda memiliki Un-Sama WAN Links, misalnya WAN, 1 adalah dari 4MB dan WAN, 2 adalah dari 8 Mb, 
+#dan Anda ingin memaksa MT untuk menggunakan WAN2 Link lebih dari yang lain karena kapasitasnya
+
+add chain=prerouting dst-address-type=!local in-interface=LAN1 per-connection-classifier=both-addresses-and-ports:2/1 action=mark-connection new-connection-mark=WAN2_conn passthrough=yes
+ 
+add action=mark-routing chain=prerouting connection-mark=WAN1_conn \
+    in-interface=LAN1 new-routing-mark=to_WAN1
+add action=mark-routing chain=prerouting connection-mark=WAN2_conn \
+    in-interface=LAN1 new-routing-mark=to_WAN2
+/ip firewall nat
+add action=passthrough chain=unused-hs-chain comment=\
+    "place hotspot rules here" disabled=yes
+add action=masquerade chain=srcnat out-interface=WAN1
+add action=masquerade chain=srcnat out-interface=WAN2
+add chain=pre-hotspot dst-address-type=!local hotspot=auth to-addresses=\
+    0.0.0.0
+/ip hotspot user
+add name=test password=1234
+/ip route
+add check-gateway=ping distance=1 gateway=192.168.1.1 routing-mark=to_WAN1
+add check-gateway=ping distance=1 gateway=192.168.2.1 routing-mark=to_WAN2
+add check-gateway=ping distance=1 gateway=192.168.1.1
+add check-gateway=ping distance=2 gateway=192.168.2.1
+/ip upnp
+set allow-disable-external-interface=no
+/system lcd
+set contrast=0 enabled=no port=parallel type=24x4
+/system lcd page
+set time disabled=yes display-time=5s
+set resources disabled=yes display-time=5s
+set uptime disabled=yes display-time=5s
+set packets disabled=yes display-time=5s
+set bits disabled=yes display-time=5s
+set version disabled=yes display-time=5s
+set identity disabled=yes display-time=5s
+set WAN1 disabled=yes display-time=5s
+set WAN2 disabled=yes display-time=5s
+set LAN1 disabled=yes display-time=5s
+set ether4 disabled=yes display-time=5s
