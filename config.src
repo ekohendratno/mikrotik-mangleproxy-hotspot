@@ -1,0 +1,2 @@
+/ip firewall mangle
+add action=mark-connection chain=prerouting disabled=no dst-address-type=!local hotspot=auth in-interface=bridge1 new-connection-mark=WAN_conn passthrough=yes per-connection-classifier=both-addresses-and-ports:1/0
