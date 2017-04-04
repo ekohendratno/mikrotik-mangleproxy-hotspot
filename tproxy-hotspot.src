@@ -1,1 +1,16 @@
-
+/interface ethernet
+set [ find default-name=ether2 ] name=LAN
+set [ find default-name=ether1 ] name=WAN
+/ip address
+add address=192.168.4.1/24 interface=LAN network=192.168.4.0
+add address=192.168.1.2/24 interface=WAN network=192.168.1.0
+/ip dns set servers=8.8.8.8,8.8.4.4
+/ip route add gateway=192.168.1.1
+/ip firewall nat
+add action=passthrough chain=unused-hs-chain comment=\
+    "place hotspot rules here" disabled=yes
+add action=masquerade chain=srcnat out-interface=WAN
+add chain=pre-hotspot dst-address-type=!local hotspot=auth to-addresses=\
+    0.0.0.0
+ 
+ 
