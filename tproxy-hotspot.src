@@ -4,7 +4,7 @@ set [ find default-name=ether1 ] name=WAN
 /ip address
 add address=192.168.4.1/24 interface=LAN network=192.168.4.0
 add address=192.168.1.2/24 interface=WAN network=192.168.1.0
-/ip dns set servers=8.8.8.8,8.8.4.4
+/ip dns set servers=8.8.8.8,8.8.4.4 allow-remote-requests=yes 
 /ip route add gateway=192.168.1.1
 /ip firewall nat
 add action=passthrough chain=unused-hs-chain comment=\
@@ -12,5 +12,18 @@ add action=passthrough chain=unused-hs-chain comment=\
 add action=masquerade chain=srcnat out-interface=WAN
 add chain=pre-hotspot dst-address-type=!local hotspot=auth to-addresses=\
     0.0.0.0
- 
- 
+
+ /ip hotspot profile
+add dns-name=hotspot.id hotspot-address=192.168.4.1 login-by=http-chap \
+    name=hsprof1
+/ip hotspot user profile
+set [ find default=yes ] idle-timeout=none keepalive-timeout=2m \
+    mac-cookie-timeout=3d
+/ip pool
+add name=hs-pool-3 ranges=192.168.4.10-192.168.4.20
+/ip dhcp-server
+add address-pool=hs-pool-3 disabled=no interface=LAN lease-time=1h name=\
+    dhcp1
+/ip hotspot
+add address-pool=hs-pool-3 disabled=no interface=LAN name=hotspot1 profile=\
+    hsprof1 
