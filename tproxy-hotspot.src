@@ -1,7 +1,9 @@
 /interface ethernet
+set [ find default-name=ether3 ] name=LAN-PROXY
 set [ find default-name=ether2 ] name=LAN
 set [ find default-name=ether1 ] name=WAN
 /ip address
+add address=192.168.3.1/24 intetface=LAN-PROXY network=192.168.3.0
 add address=192.168.4.1/24 interface=LAN network=192.168.4.0
 add address=192.168.1.2/24 interface=WAN network=192.168.1.0
 /ip dns set servers=8.8.8.8,8.8.4.4 allow-remote-requests=yes 
@@ -27,3 +29,20 @@ add address-pool=hs-pool-3 disabled=no interface=LAN lease-time=1h name=\
 /ip hotspot
 add address-pool=hs-pool-3 disabled=no interface=LAN name=hotspot1 profile=\
     hsprof1 
+
+/ip firewall mangle
+add action=mark-routing chain=prerouting comment=80 disabled=yes dst-port=80 \
+    in-interface=LAN new-routing-mark=tproxy_rm passthrough=no protocol=\
+    tcp
+add action=mark-routing chain=prerouting comment=443 disabled=yes dst-port=\
+    443 in-interface=LAN new-routing-mark=tproxy_rm passthrough=no \
+    protocol=tcp
+add action=mark-connection chain=prerouting comment=TPROXY-PROXY disabled=yes \
+    dst-port=80,443 in-interface=LAN-PROXY new-connection-mark=tproxy_cm \
+    passthrough=yes protocol=tcp src-address=!192.168.3.254
+add action=mark-routing chain=prerouting comment=TPROXY-!PROXY \
+    connection-mark=tproxy_cm disabled=yes in-interface=!LAN-PROXY \
+    new-routing-mark=tproxy_rm passthrough=no
+ 
+/ip route
+add comment=TPROXY distance=1 gateway=192.168.3.254 routing-mark=tproxy_rm
